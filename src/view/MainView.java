@@ -3,6 +3,7 @@ package view;
 import model.Student;
 import service.StudentService;
 import util.ReportExporter;
+import util.UiStyles;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -264,10 +265,7 @@ public class MainView extends JFrame {
     }
 
     void styleTextField(JTextField field) {
-        field.setBackground(new Color(49, 50, 68));
-        field.setForeground(new Color(205, 214, 244));
-        field.setCaretColor(Color.WHITE);
-        field.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
+        UiStyles.applyInputFieldStyle(field);
     }
 
     JLabel addResultLabel(JPanel panel, String text) {

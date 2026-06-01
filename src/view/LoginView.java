@@ -1,6 +1,7 @@
 package view;
 
 import service.StudentService;
+import util.UiStyles;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -14,7 +15,7 @@ public class LoginView extends JFrame {
     public LoginView(StudentService service) {
         this.service = service;
         setTitle("Login — Student Result System");
-        setSize(380, 260);
+        setSize(400, 280);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
@@ -26,6 +27,7 @@ public class LoginView extends JFrame {
         add(createBotPanel(), BorderLayout.SOUTH);
 
         setVisible(true);
+        SwingUtilities.invokeLater(() -> txtUsername.requestFocusInWindow());
     }
 
     JPanel createTopPanel() {
@@ -46,27 +48,33 @@ public class LoginView extends JFrame {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(6, 5, 6, 5);
+        gbc.anchor = GridBagConstraints.WEST;
 
         gbc.gridx = 0;
         gbc.gridy = 0;
+        gbc.weightx = 0;
         JLabel lblUser = new JLabel("Username:");
         lblUser.setForeground(new Color(166, 173, 200));
         panel.add(lblUser, gbc);
 
         gbc.gridx = 1;
-        txtUsername = new JTextField(15);
-        styleField(txtUsername);
+        gbc.weightx = 1.0;
+        txtUsername = new JTextField(18);
+        UiStyles.applyInputFieldStyle(txtUsername);
         panel.add(txtUsername, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 1;
+        gbc.weightx = 0;
         JLabel lblPass = new JLabel("Password:");
         lblPass.setForeground(new Color(166, 173, 200));
         panel.add(lblPass, gbc);
 
         gbc.gridx = 1;
-        txtPassword = new JPasswordField(15);
-        styleField(txtPassword);
+        gbc.weightx = 1.0;
+        txtPassword = new JPasswordField(18);
+        UiStyles.applyInputFieldStyle(txtPassword);
+        txtPassword.setEchoChar('\u2022');
         txtPassword.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -99,18 +107,9 @@ public class LoginView extends JFrame {
         return panel;
     }
 
-    void styleField(JTextField field) {
-        field.setBackground(new Color(49, 50, 68));
-        field.setForeground(new Color(205, 214, 244));
-        field.setCaretColor(Color.WHITE);
-        field.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
-    }
-
     void login() {
         String username = txtUsername.getText().trim();
-        char[] passChars = txtPassword.getPassword();
-        String password = new String(passChars).trim();
-        java.util.Arrays.fill(passChars, '\0');
+        String password = new String(txtPassword.getPassword());
 
         if (username.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please enter username and password.");
@@ -127,6 +126,7 @@ public class LoginView extends JFrame {
                         "Login Failed",
                         JOptionPane.ERROR_MESSAGE);
                 txtPassword.setText("");
+                txtPassword.requestFocusInWindow();
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
