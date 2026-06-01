@@ -52,7 +52,7 @@ StudentResultSystem/
 │   ├── model/Student.java
 │   ├── dao/StudentDAO.java
 │   ├── service/StudentService.java
-│   ├── util/AppConfig.java, DBConnection.java, PasswordUtil.java, ReportExporter.java
+│   ├── util/AppConfig, DBConnection, PasswordUtil, ReportExporter, UiStyles
 │   └── view/Main.java, LoginView.java, MainView.java
 └── test/model/StudentGradeTest.java
 ```
@@ -115,7 +115,7 @@ If `config.properties` is missing, the app falls back to `root` / `root123` (cha
 Run `test.model.StudentGradeTest` main method, or from `build/classes` after compile:
 
 ```bash
-java -cp "build/classes;." model.StudentGradeTest
+java -cp build/classes test.model.StudentGradeTest
 ```
 
 ---
