@@ -1,19 +1,20 @@
 package util;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 
 public class DBConnection {
 
-    private static final String URL  = "jdbc:mysql://localhost:3306/student_result_db";
-    private static final String USER = "root";
-    private static final String PASS = "root123"; // ← change this
-
     private static Connection connection = null;
 
-    // Singleton — only one connection at a time
     public static Connection getConnection() throws SQLException {
+        AppConfig.load();
         if (connection == null || connection.isClosed()) {
-            connection = DriverManager.getConnection(URL, USER, PASS);
+            connection = DriverManager.getConnection(
+                    AppConfig.getDbUrl(),
+                    AppConfig.getDbUser(),
+                    AppConfig.getDbPassword());
         }
         return connection;
     }

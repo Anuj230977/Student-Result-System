@@ -1,22 +1,21 @@
 package view;
 
-import dao.StudentDAO;
 import model.Student;
+import service.StudentService;
+import util.ReportExporter;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.*;
-import java.sql.*;
+import java.io.File;
 import java.util.List;
 import javax.swing.text.*;
 
 public class MainView extends JFrame {
 
-    StudentDAO dao = new StudentDAO();
+    private final StudentService service;
 
-    // Subject names
     String[] subjectNames = new String[5];
 
     // Input fields
@@ -28,12 +27,12 @@ public class MainView extends JFrame {
     DefaultTableModel tableModel;
     JComboBox<String> filterCombo;
 
-    public MainView() {
+    public MainView(StudentService service) {
+        this.service = service;
         try {
-            dao.setupTables();
-            subjectNames = dao.getSubjectNames();
+            subjectNames = service.getSubjectNames();
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "DB Error: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, StudentService.friendlyMessage(e));
         }
 
         setTitle("Student Result Management System");
@@ -203,7 +202,7 @@ public class MainView extends JFrame {
         topBar.add(new JSeparator(SwingConstants.VERTICAL));
         topBar.add(makeButton("Import CSV", hexColor("fab387"), e -> importCSV()));
         topBar.add(makeButton("Export CSV", hexColor("a6e3a1"), e -> exportCSV()));
-        topBar.add(makeButton("Export TEXT", hexColor("89b4fa"), e -> exportPDF()));
+        topBar.add(makeButton("Export Report (.txt)", hexColor("89b4fa"), e -> exportTextReport()));
         topBar.add(lblRowCount);
 
         panel.add(topBar, BorderLayout.NORTH);
@@ -331,14 +330,14 @@ public class MainView extends JFrame {
             lblPercent.setText("Percentage: " + String.format("%.2f", s.getPercentage()) + "%");
             lblGrade.setText("Grade:      " + s.getGrade());
 
-            if (dao.addStudent(s)) {
-                JOptionPane.showMessageDialog(this, "Student added successfully!");
-                loadAllStudents();
-                updateStats();
-                clearFields();
-            }
+            service.addStudent(s);
+            JOptionPane.showMessageDialog(this, "Student added successfully!");
+            loadAllStudents();
+            updateStats();
+            clearFields();
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, StudentService.friendlyMessage(e),
+                    "Could not add student", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -361,7 +360,7 @@ public class MainView extends JFrame {
             double s5 = parseMarks(txtS5.getText(), subjectNames[4]);
 
             Student s = new Student(roll, name, s1, s2, s3, s4, s5);
-            if (dao.updateStudent(s)) {
+            if (service.updateStudent(s)) {
                 JOptionPane.showMessageDialog(this, "Student updated successfully!");
                 loadAllStudents();
                 updateStats();
@@ -370,7 +369,8 @@ public class MainView extends JFrame {
                 JOptionPane.showMessageDialog(this, "No student found with Roll No: " + roll);
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, StudentService.friendlyMessage(e),
+                    "Could not update student", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -386,14 +386,14 @@ public class MainView extends JFrame {
                 "Confirm Delete", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                if (dao.deleteStudent(roll)) {
+                if (service.deleteStudent(roll)) {
                     JOptionPane.showMessageDialog(this, "Student deleted successfully!");
                     loadAllStudents();
                     updateStats();
                     clearFields();
                 }
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, StudentService.friendlyMessage(e));
             }
         }
     }
@@ -402,7 +402,7 @@ public class MainView extends JFrame {
     void loadAllStudents() {
         tableModel.setRowCount(0);
         try {
-            List<Student> students = dao.getAllStudents();
+            List<Student> students = service.getAllStudents();
             for (Student s : students) {
                 addRowToTable(s);
             }
@@ -421,14 +421,13 @@ public class MainView extends JFrame {
         }
         tableModel.setRowCount(0);
         try {
-            List<Student> students = dao.searchStudents(keyword);
+            List<Student> students = service.searchStudents(keyword);
             for (Student s : students) {
                 addRowToTable(s);
             }
             lblRowCount.setText("Results: " + students.size());
-            txtSearch.setText("");
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, StudentService.friendlyMessage(e));
         }
     }
 
@@ -439,11 +438,11 @@ public class MainView extends JFrame {
         try {
             List<Student> students;
             if ("Pass".equals(filter)) {
-                students = dao.getPassStudents();
+                students = service.getPassStudents();
             } else if ("Fail".equals(filter)) {
-                students = dao.getFailStudents();
+                students = service.getFailStudents();
             } else {
-                students = dao.getAllStudents();
+                students = service.getAllStudents();
             }
             for (Student s : students) {
                 addRowToTable(s);
@@ -457,7 +456,7 @@ public class MainView extends JFrame {
     // ─── UPDATE STATS ────────────────────────────────────────────
     void updateStats() {
         try {
-            int[] stats = dao.getStats();
+            int[] stats = service.getStats();
             int total = stats[0];
             int passed = stats[1];
             int avg = stats[3];
@@ -478,7 +477,7 @@ public class MainView extends JFrame {
             return;
         }
         try {
-            int[] result = dao.importCSV(fc.getSelectedFile().getAbsolutePath());
+            int[] result = service.importCSV(fc.getSelectedFile().getAbsolutePath());
             JOptionPane.showMessageDialog(this,
                     "Import Complete!\nImported: " + result[0] + "\nSkipped: " + result[1]
                     + "\n\nCSV format: roll_number, name, s1, s2, s3, s4, s5");
@@ -502,18 +501,17 @@ public class MainView extends JFrame {
             if (!path.endsWith(".csv")) {
                 path += ".csv";
             }
-            dao.exportCSV(path, subjectNames);
+            service.exportCSV(path, subjectNames);
             JOptionPane.showMessageDialog(this, "CSV exported to:\n" + path);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Export error: " + e.getMessage());
         }
     }
 
-    // ─── EXPORT PDF (formatted text report) ──────────────────────
-    void exportPDF() {
+    void exportTextReport() {
         JFileChooser fc = new JFileChooser();
         fc.setSelectedFile(new File("student_results.txt"));
-        fc.setFileFilter(new FileNameExtensionFilter("Text Report", "txt"));
+        fc.setFileFilter(new FileNameExtensionFilter("Text Report (.txt)", "txt"));
         if (fc.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
             return;
         }
@@ -522,51 +520,14 @@ public class MainView extends JFrame {
             if (!path.endsWith(".txt")) {
                 path += ".txt";
             }
-            PrintWriter pw = new PrintWriter(new FileWriter(path));
-            pw.println("=".repeat(95));
-            pw.println("              STUDENT RESULT MANAGEMENT SYSTEM — RESULT REPORT");
-            pw.println("=".repeat(95));
-            pw.println("Generated: " + new java.util.Date());
-            pw.println();
-            pw.printf("%-12s %-20s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-6s%n",
-                    "Roll No", "Name",
-                    shorten(subjectNames[0]), shorten(subjectNames[1]),
-                    shorten(subjectNames[2]), shorten(subjectNames[3]),
-                    shorten(subjectNames[4]), "Total", "Percent", "Grade");
-            pw.println("-".repeat(95));
-
-            List<Student> students = dao.getAllStudents();
-            for (Student s : students) {
-                pw.printf("%-12s %-20s %-8.1f %-8.1f %-8.1f %-8.1f %-8.1f %-8.1f %-8.2f %-6s%n",
-                        s.getRollNumber(), s.getName(),
-                        s.getSubject1(), s.getSubject2(), s.getSubject3(),
-                        s.getSubject4(), s.getSubject5(),
-                        s.getTotal(), s.getPercentage(), s.getGrade());
-            }
-
-            int[] stats = dao.getStats();
-            int total = stats[0], passed = stats[1], failed = stats[2], avg = stats[3];
-            pw.println("=".repeat(95));
-            pw.println();
-            pw.println("SUMMARY");
-            pw.println("-".repeat(30));
-            pw.println("Total Students : " + total);
-            pw.println("Passed         : " + passed);
-            pw.println("Failed         : " + failed);
-            pw.println("Pass %         : " + (total > 0 ? String.format("%.1f%%", passed * 100.0 / total) : "N/A"));
-            pw.println("Class Average  : " + avg + "%");
-            pw.println("=".repeat(95));
-            pw.close();
-
+            ReportExporter.exportTextReport(path, subjectNames,
+                    service.getAllStudents(), service.getStats());
             JOptionPane.showMessageDialog(this,
                     "Report saved to:\n" + path + "\n\nOpen and press Ctrl+P to print!");
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Export error: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, StudentService.friendlyMessage(e),
+                    "Export failed", JOptionPane.ERROR_MESSAGE);
         }
-    }
-
-    String shorten(String s) {
-        return s.length() > 7 ? s.substring(0, 7) : s;
     }
 
     // ─── SAVE SUBJECT NAMES ──────────────────────────────────────
@@ -576,7 +537,7 @@ public class MainView extends JFrame {
                 String n = subjectNameFields[i].getText().trim();
                 subjectNames[i] = n.isEmpty() ? "Subject " + (i + 1) : n;
             }
-            dao.saveSubjectNames(subjectNames);
+            service.saveSubjectNames(subjectNames);
             updateTableHeaders();
             JOptionPane.showMessageDialog(this, "Subject names saved!");
         } catch (Exception e) {

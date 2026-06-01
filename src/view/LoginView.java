@@ -1,28 +1,29 @@
 package view;
 
-import dao.StudentDAO;
+import service.StudentService;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 
 public class LoginView extends JFrame {
 
+    private final StudentService service;
     JTextField txtUsername;
     JPasswordField txtPassword;
-    StudentDAO dao = new StudentDAO();
 
-    public LoginView() {
+    public LoginView(StudentService service) {
+        this.service = service;
         setTitle("Login — Student Result System");
-        setSize(380, 280);
+        setSize(380, 260);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
         getContentPane().setBackground(new Color(30, 30, 46));
         setLayout(new BorderLayout());
 
-        add(createTopPanel(),  BorderLayout.NORTH);
+        add(createTopPanel(), BorderLayout.NORTH);
         add(createFormPanel(), BorderLayout.CENTER);
-        add(createBotPanel(),  BorderLayout.SOUTH);
+        add(createBotPanel(), BorderLayout.SOUTH);
 
         setVisible(true);
     }
@@ -46,8 +47,8 @@ public class LoginView extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(6, 5, 6, 5);
 
-        // Username
-        gbc.gridx = 0; gbc.gridy = 0;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
         JLabel lblUser = new JLabel("Username:");
         lblUser.setForeground(new Color(166, 173, 200));
         panel.add(lblUser, gbc);
@@ -57,8 +58,8 @@ public class LoginView extends JFrame {
         styleField(txtUsername);
         panel.add(txtUsername, gbc);
 
-        // Password
-        gbc.gridx = 0; gbc.gridy = 1;
+        gbc.gridx = 0;
+        gbc.gridy = 1;
         JLabel lblPass = new JLabel("Password:");
         lblPass.setForeground(new Color(166, 173, 200));
         panel.add(lblPass, gbc);
@@ -66,10 +67,12 @@ public class LoginView extends JFrame {
         gbc.gridx = 1;
         txtPassword = new JPasswordField(15);
         styleField(txtPassword);
-        // Login on Enter key
         txtPassword.addKeyListener(new KeyAdapter() {
+            @Override
             public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) login();
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    login();
+                }
             }
         });
         panel.add(txtPassword, gbc);
@@ -93,11 +96,6 @@ public class LoginView extends JFrame {
         btnLogin.addActionListener(e -> login());
         panel.add(btnLogin);
 
-        JLabel hint = new JLabel("Default: admin / admin123");
-        hint.setForeground(new Color(88, 91, 112));
-        hint.setFont(new Font("Arial", Font.ITALIC, 11));
-        panel.add(hint);
-
         return panel;
     }
 
@@ -110,7 +108,9 @@ public class LoginView extends JFrame {
 
     void login() {
         String username = txtUsername.getText().trim();
-        String password = new String(txtPassword.getPassword()).trim();
+        char[] passChars = txtPassword.getPassword();
+        String password = new String(passChars).trim();
+        java.util.Arrays.fill(passChars, '\0');
 
         if (username.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please enter username and password.");
@@ -118,18 +118,21 @@ public class LoginView extends JFrame {
         }
 
         try {
-            if (dao.login(username, password)) {
-                dispose(); // close login window
-                new MainView(); // open main app
+            if (service.login(username, password)) {
+                dispose();
+                new MainView(service);
             } else {
-                JOptionPane.showMessageDialog(this, 
-                    "Invalid username or password!", 
-                    "Login Failed", 
-                    JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Invalid username or password!",
+                        "Login Failed",
+                        JOptionPane.ERROR_MESSAGE);
                 txtPassword.setText("");
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "DB Error: " + e.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    StudentService.friendlyMessage(e),
+                    "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 }

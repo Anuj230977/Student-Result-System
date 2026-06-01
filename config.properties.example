@@ -1,0 +1,6 @@
+# Copy this file to config.properties and set your MySQL password.
+# config.properties is ignored by Git — never commit real credentials.
+
+db.url=jdbc:mysql://localhost:3306/student_result_db
+db.user=root
+db.password=your_mysql_password_here
